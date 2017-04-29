@@ -96,15 +96,16 @@ std::endl ;
      }
 
      	 ofstream writer;
-     	 writer.open("Log.csv");
+     	 writer.open("Log.txt");
      char out_buf[] = "check";
      serial_port.write(out_buf, 5);
-     while( serial_port.rdbuf()->in_avail() > 0 )
+     //while( serial_port.rdbuf()->in_avail() > 0 )
+     while(1)
      {
          char next_byte;
          serial_port.get(next_byte);
          std::cerr << next_byte;
-         	 	 	writer<<next_byte<<",";
+         	 	 	writer<<next_byte;
 
      }
      std::cerr << std::endl ;

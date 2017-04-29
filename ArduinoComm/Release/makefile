@@ -8,7 +8,6 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
--include libserial-0.6.0rc2/src/subdir.mk
 -include subdir.mk
 -include objects.mk
 
