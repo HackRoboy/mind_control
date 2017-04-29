@@ -39,7 +39,7 @@ void move_head(int pos){
     }
 
 }
-
+#if 0
 int main( int    argc, char** argv  ){
 
     ros::init(argc, argv, "mind_control");
@@ -50,7 +50,8 @@ int main( int    argc, char** argv  ){
      * NodeHandle destructed will close down the node.
      */
     ros::NodeHandle n;
-
+    ROS_INFO("INIT");
+    std::cout << "init" << std::endl;
 
      //
      // Open the serial port.
@@ -144,6 +145,7 @@ std::endl ;
      serial_port.write(out_buf, 5);
      while( serial_port.rdbuf()->in_avail() > 0 )
      {
+         ROS_INFO("while loop");
          char next_byte;
          serial_port.get(next_byte);
          if(next_byte=='\n'){
@@ -158,6 +160,7 @@ std::endl ;
                  ROS_INFO("MOVE HEAD");
                  move_head(8);
              }else{
+                 ROS_INFO("DONT MOVE HEAD");
                  move_head(0);
              }
              //clear last_bytes
@@ -177,15 +180,17 @@ std::endl ;
 }
 
 
+#endif
 
-
-#if 0
+#if 1
 
 /**
  * This tutorial demonstrates simple sending of messages over the ROS system.
  */
 int main(int argc, char **argv)
 {
+  std::cout << "starting" << std::endl;
+  ROS_INFO("Starting");
   /**
    * The ros::init() function needs to see argc and argv so that it can perform
    * any ROS arguments and name remapping that were provided at the command line.
@@ -198,6 +203,7 @@ int main(int argc, char **argv)
    */
   ros::init(argc, argv, "talker");
 
+
   /**
    * NodeHandle is the main access point to communications with the ROS system.
    * The first NodeHandle constructed will fully initialize this node, and the last
@@ -205,6 +211,7 @@ int main(int argc, char **argv)
    */
   ros::NodeHandle n;
 
+  ROS_INFO("Handle created");
   /**
    * The advertise() function is how you tell ROS that you want to
    * publish on a given topic name. This invokes a call to the ROS
@@ -222,9 +229,10 @@ int main(int argc, char **argv)
    * than we can send them, the number here specifies how many messages to
    * buffer up before throwing some away.
    */
+  ROS_INFO("init");
   ros::Publisher chatter_pub = n.advertise<std_msgs::String>("chatter", 1000);
 
-  ros::ServiceClient move_yaw_client = n.serviceClient<roboy_comm::Yaw>("roboy_move/yaw");
+  move_yaw_client = n.serviceClient<roboy_comm::Yaw>("roboy_move/yaw");
   ros::ServiceClient move_client = n.serviceClient<roboy_comm::Movement>("roboy_move/replay");
   ros::ServiceClient emotion_client = n.serviceClient<roboy_comm::ShowEmotion>("roboy_face/show_emotion");
   ros::ServiceClient talker_client = n.serviceClient<roboy_comm::Talk>("speech_synthesis/talk");
@@ -235,7 +243,7 @@ int main(int argc, char **argv)
    * A count of how many messages we have sent. This is used to create
    * a unique string for each message.
    */
-  int count = 0;
+  int count = 100;
   bool left = false;
   while (ros::ok())
   {
@@ -262,7 +270,7 @@ int main(int argc, char **argv)
 
     move_yaw_srv.request.value = count_2;
 
-    //ROS_INFO_STREAM("calling move_client");
+    ROS_INFO_STREAM("calling move_client");
     move_yaw_client.call(move_yaw_srv);
 
     roboy_comm::ShowEmotion emotion_srv;
