@@ -3,6 +3,7 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "roboy_comm/Yaw.h"
+#include "roboy_comm/Movement.h"
 
 #include <sstream>
 
@@ -49,54 +50,51 @@ int main(int argc, char **argv)
    */
   ros::Publisher chatter_pub = n.advertise<std_msgs::String>("chatter", 1000);
 
-  ros::ServiceClient move_client = n.serviceClient<roboy_comm::Yaw>("roboy_move/yaw");
+  ros::ServiceClient move_yaw_client = n.serviceClient<roboy_comm::Yaw>("roboy_move/yaw");
+  ros::ServiceClient move_client = n.serviceClient<roboy_comm::Movement>("roboy_move/replay");
 
-  ros::Rate loop_rate(10);
+  ros::Rate loop_rate(1);
 
   /**
    * A count of how many messages we have sent. This is used to create
    * a unique string for each message.
    */
   int count = 0;
-  int count_2 = 0;
+  bool left = false;
   while (ros::ok())
   {
-    /**
-     * This is a message object. You stuff it with data, and then publish it.
-     */
-    std_msgs::String msg;
+
+      if(count==100){
+          ROS_INFO_STREAM("calling move introduction");
+          roboy_comm::Movement move_srv;
+          move_srv.request.value = "TheatreWave";
+          if(move_client.call(move_srv)){
+              ROS_INFO("Call valid!");
+          }
+          if(move_srv.response.success){
+              ROS_INFO("success");
+          }
+          return 0;
+      }
 
     roboy_comm::Yaw move_yaw_srv;
-
-    if(count_2>12){
+    int count_2 = 12;
+    if(left){
         count_2=-12;
     }
+    left = !left;
 
     move_yaw_srv.request.value = count_2;
 
     ROS_INFO_STREAM("calling move_client");
-    move_client.call(move_yaw_srv);
+    move_yaw_client.call(move_yaw_srv);
 
-    count_2++;
 
-    std::stringstream ss;
-    ss << "hello world " << count;
-    msg.data = ss.str();
 
-    ROS_INFO("%s", msg.data.c_str());
-
-    /**
-     * The publish() function is how you send messages. The parameter
-     * is the message object. The type of this object must agree with the type
-     * given as a template parameter to the advertise<>() call, as was done
-     * in the constructor above.
-     */
-    chatter_pub.publish(msg);
-
+    count++;
     ros::spinOnce();
 
     loop_rate.sleep();
-    ++count;
   }
 
 
