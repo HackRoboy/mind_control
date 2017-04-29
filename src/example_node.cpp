@@ -2,6 +2,7 @@
 
 #include "ros/ros.h"
 #include "std_msgs/String.h"
+#include "roboy_comm/Yaw.h"
 
 #include <sstream>
 
@@ -48,6 +49,8 @@ int main(int argc, char **argv)
    */
   ros::Publisher chatter_pub = n.advertise<std_msgs::String>("chatter", 1000);
 
+  ros::ServiceClient move_client = n.serviceClient<roboy_comm::Yaw>("roboy_move/yaw");
+
   ros::Rate loop_rate(10);
 
   /**
@@ -55,12 +58,26 @@ int main(int argc, char **argv)
    * a unique string for each message.
    */
   int count = 0;
+  int count_2 = 0;
   while (ros::ok())
   {
     /**
      * This is a message object. You stuff it with data, and then publish it.
      */
     std_msgs::String msg;
+
+    roboy_comm::Yaw move_yaw_srv;
+
+    if(count_2>12){
+        count_2=-12;
+    }
+
+    move_yaw_srv.request.value = count_2;
+
+    ROS_INFO_STREAM("calling move_client");
+    move_client.call(move_yaw_srv);
+
+    count_2++;
 
     std::stringstream ss;
     ss << "hello world " << count;
