@@ -1,0 +1,3 @@
+<launch>
+	<node pkg="roboy_emg_control" name="example_node" type="roboy_emg_example_node"/>
+</launch>
