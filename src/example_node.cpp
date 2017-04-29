@@ -9,6 +9,178 @@
 
 #include <sstream>
 
+
+
+/*
+ * Comm.cpp
+ *
+ *  Created on: 29-04-2017
+ *      Author: mayank
+ */
+#include <SerialStream.h>
+#include <iostream>
+#include <unistd.h>
+#include <cstdlib>
+#include <string>
+
+ using namespace std;
+ using namespace LibSerial ;
+
+ros::ServiceClient move_yaw_client;
+double THRESHOLD_1 = 220;
+std::vector<char> last_bytes;
+
+void move_head(int pos){
+    if(ros::ok()){
+        ROS_INFO_STREAM("Moving head: " << pos);
+        roboy_comm::Yaw srv;
+        srv.request.value = pos;
+        move_yaw_client.call(srv);
+    }
+
+}
+
+int main( int    argc, char** argv  ){
+
+    ros::init(argc, argv, "mind_control");
+
+    /**
+     * NodeHandle is the main access point to communications with the ROS system.
+     * The first NodeHandle constructed will fully initialize this node, and the last
+     * NodeHandle destructed will close down the node.
+     */
+    ros::NodeHandle n;
+
+
+     //
+     // Open the serial port.
+     //
+     SerialStream serial_port ;
+     char c;
+     serial_port.Open( "/dev/ttyACM0" ) ;
+     if ( ! serial_port.good() )
+     {
+         std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] "
+                   << "Error: Could not open serial port."
+                   << std::endl ;
+         exit(1) ;
+     }
+     //
+     // Set the baud rate of the serial port.
+     //
+     serial_port.SetBaudRate( SerialStreamBuf::BAUD_57600 ) ;
+     if ( ! serial_port.good() )
+     {
+         std::cerr << "Error: Could not set the baud rate." <<
+std::endl ;
+         exit(1) ;
+     }
+     //
+     // Set the number of data bits.
+     //
+     serial_port.SetCharSize( SerialStreamBuf::CHAR_SIZE_8 ) ;
+     if ( ! serial_port.good() )
+     {
+         std::cerr << "Error: Could not set the character size." <<
+std::endl ;
+         exit(1) ;
+     }
+     //
+     // Disable parity.
+     //
+     serial_port.SetParity( SerialStreamBuf::PARITY_NONE ) ;
+     if ( ! serial_port.good() )
+     {
+         std::cerr << "Error: Could not disable the parity." <<
+std::endl ;
+         exit(1) ;
+     }
+     //
+     // Set the number of stop bits.
+     //
+     serial_port.SetNumOfStopBits( 1 ) ;
+     if ( ! serial_port.good() )
+     {
+         std::cerr << "Error: Could not set the number of stop bits."
+                   << std::endl ;
+         exit(1) ;
+     }
+     //
+     // Turn off hardware flow control.
+     //
+     serial_port.SetFlowControl( SerialStreamBuf::FLOW_CONTROL_NONE ) ;
+     if ( ! serial_port.good() )
+     {
+         std::cerr << "Error: Could not use hardware flow control."
+                   << std::endl ;
+         exit(1) ;
+     }
+     //
+     // Do not skip whitespace characters while reading from the
+     // serial port.
+     //
+     // serial_port.unsetf( std::ios_base::skipws ) ;
+     //
+     // Wait for some data to be available at the serial port.
+     //
+     //
+     // Keep reading data from serial port and print it to the screen.
+     //
+  // Wait for some data to be available at the serial port.
+     //
+
+     // ServiceClient to give roboy commands
+     move_yaw_client = n.serviceClient<roboy_comm::Yaw>("roboy_move/yaw");
+
+
+     while( serial_port.rdbuf()->in_avail() == 0 )
+     {
+         usleep(100) ;
+     }
+
+         ofstream writer;
+         writer.open("Log.csv");
+     char out_buf[] = "check";
+     serial_port.write(out_buf, 5);
+     while( serial_port.rdbuf()->in_avail() > 0 )
+     {
+         char next_byte;
+         serial_port.get(next_byte);
+         if(next_byte=='\n'){
+             //calculate mean and decide action
+             double mean = 0;
+             for(int i = 0; i < 6; i++){
+                 mean += (int)last_bytes[1+i*2];
+             }
+             mean /=6;
+
+             if(mean>THRESHOLD_1){
+                 ROS_INFO("MOVE HEAD");
+                 move_head(8);
+             }else{
+                 move_head(0);
+             }
+             //clear last_bytes
+             last_bytes.clear();
+         }else{
+             //collect data
+             last_bytes.push_back(next_byte);
+         }
+         std::cerr << next_byte;
+                    writer<<next_byte<<",";
+
+
+     }
+     std::cerr << std::endl ;
+             writer.close();
+     return EXIT_SUCCESS ;
+}
+
+
+
+
+#if 0
+
 /**
  * This tutorial demonstrates simple sending of messages over the ROS system.
  */
@@ -114,3 +286,4 @@ int main(int argc, char **argv)
 
   return 0;
 }
+#endif
