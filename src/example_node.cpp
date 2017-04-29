@@ -4,6 +4,8 @@
 #include "std_msgs/String.h"
 #include "roboy_comm/Yaw.h"
 #include "roboy_comm/Movement.h"
+#include "roboy_comm/ShowEmotion.h"
+#include "roboy_comm/Talk.h"
 
 #include <sstream>
 
@@ -52,6 +54,8 @@ int main(int argc, char **argv)
 
   ros::ServiceClient move_yaw_client = n.serviceClient<roboy_comm::Yaw>("roboy_move/yaw");
   ros::ServiceClient move_client = n.serviceClient<roboy_comm::Movement>("roboy_move/replay");
+  ros::ServiceClient emotion_client = n.serviceClient<roboy_comm::ShowEmotion>("roboy_face/show_emotion");
+  ros::ServiceClient talker_client = n.serviceClient<roboy_comm::Talk>("speech_synthesis/talk");
 
   ros::Rate loop_rate(1);
 
@@ -78,18 +82,28 @@ int main(int argc, char **argv)
       }
 
     roboy_comm::Yaw move_yaw_srv;
-    int count_2 = 12;
+    int count_2 = 8;
     if(left){
-        count_2=-12;
+        count_2=-8;
     }
     left = !left;
 
     move_yaw_srv.request.value = count_2;
 
-    ROS_INFO_STREAM("calling move_client");
+    //ROS_INFO_STREAM("calling move_client");
     move_yaw_client.call(move_yaw_srv);
 
+    roboy_comm::ShowEmotion emotion_srv;
+    roboy_comm::Talk talk_srv;
 
+    if(false){
+        ROS_INFO("SmileBlink");
+        emotion_srv.request.emotion = "smileblink";
+        emotion_client.call(emotion_srv);
+
+        talk_srv.request.text = "Hallo";
+        talker_client.call(talk_srv);
+    }
 
     count++;
     ros::spinOnce();
