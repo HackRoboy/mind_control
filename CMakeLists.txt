@@ -137,7 +137,7 @@ add_dependencies(roboy_emg_example_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${ca
 ## Specify libraries to link a library or executable target against
 target_link_libraries(roboy_emg_example_node
    ${catkin_LIBRARIES}
-    /usr/lib/libserial.so
+    ~/catkin_ws/src/mind_control/include/libserial.so
 )
 
 #############
