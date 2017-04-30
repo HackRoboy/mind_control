@@ -1,10 +1,10 @@
 
-#if 1
+#if 0
 int main(){
     return 0;
 }
 #endif
-#if 0
+#if 1
 //uncomment this part to use the emg and head movement control, but libs are needed!
 
 #include "ros/ros.h"
@@ -83,7 +83,7 @@ void move_head_left(bool left){
     move_head(curr_state_head_yaw);
 }
 #endif
-#if 0
+#if 1
 int main( int    argc, char** argv  ){
 
     ros::init(argc, argv, "mind_control");
