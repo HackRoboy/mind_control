@@ -23,12 +23,17 @@
 #include <cstdlib>
 #include <string>
 
+#include <sstream>
+
  using namespace std;
  using namespace LibSerial ;
+int curr_state_head_yaw = 0;
 
 ros::ServiceClient move_yaw_client;
 double THRESHOLD_1 = 220;
-std::vector<char> last_bytes;
+std::vector<int> last_bytes;
+int counter_above_th = 0;
+int counter_all = 0;
 
 void move_head(int pos){
     if(ros::ok()){
@@ -40,6 +45,38 @@ void move_head(int pos){
 
 }
 
+void move_head_left(bool left){
+    bool real_left = false;
+    //ROS_INFO_STREAM("counter: " << counter_all << " counter_abv: " << counter_above_th);
+    if(counter_all < 100){
+        if(left){
+            counter_above_th++;
+        }
+        counter_all++;
+        return;
+    }else{
+        if(counter_above_th>10){
+            real_left = true;
+        }
+        ROS_INFO_STREAM("Counter_Above_th: " << counter_above_th);
+        counter_all = 0;
+        counter_above_th = 0;
+    }
+    if(real_left){
+        curr_state_head_yaw +=1;
+        if(curr_state_head_yaw>12){
+            curr_state_head_yaw = 12;
+        }
+    }else{
+        curr_state_head_yaw -=1;
+        if(curr_state_head_yaw<-12){
+            curr_state_head_yaw = -12;
+        }
+    }
+    move_head(curr_state_head_yaw);
+}
+
+#if 1
 int main( int    argc, char** argv  ){
 
     ros::init(argc, argv, "mind_control");
@@ -50,14 +87,15 @@ int main( int    argc, char** argv  ){
      * NodeHandle destructed will close down the node.
      */
     ros::NodeHandle n;
-
+    ROS_INFO("INIT");
+    std::cout << "init" << std::endl;
 
      //
      // Open the serial port.
      //
      SerialStream serial_port ;
      char c;
-     serial_port.Open( "/dev/ttyACM0" ) ;
+     serial_port.Open( "/dev/ttyACM2" ) ;
      if ( ! serial_port.good() )
      {
          std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] "
@@ -68,7 +106,7 @@ int main( int    argc, char** argv  ){
      //
      // Set the baud rate of the serial port.
      //
-     serial_port.SetBaudRate( SerialStreamBuf::BAUD_57600 ) ;
+     serial_port.SetBaudRate( SerialStreamBuf::BAUD_9600 ) ;
      if ( ! serial_port.good() )
      {
          std::cerr << "Error: Could not set the baud rate." <<
@@ -139,45 +177,80 @@ std::endl ;
      }
 
          ofstream writer;
-         writer.open("Log.csv");
+         writer.open("Log.txt");
      char out_buf[] = "check";
      serial_port.write(out_buf, 5);
-     while( serial_port.rdbuf()->in_avail() > 0 )
+     std::stringstream ss;
+     //while( serial_port.rdbuf()->in_avail() > 0 )
+     while(1)
      {
+         //ROS_INFO("while loop");
          char next_byte;
          serial_port.get(next_byte);
          if(next_byte=='\n'){
+             //std::cout << std::endl;
              //calculate mean and decide action
              double mean = 0;
+             //for(int i = 0; i < last_bytes.size(); i++){
+             //    std::cout << last_bytes[i] << " ";
+             //}
+             //std::cout << std::endl;
+
              for(int i = 0; i < 6; i++){
-                 mean += (int)last_bytes[1+i*2];
+                 try{
+                    mean += last_bytes[1+i*2];
+                 }catch(exception e){
+                     std:cerr << "exception" << std::endl;
+                 }
+
+                 //std::cout<<(int)last_bytes[1+i*2] << ", ";
              }
+             //std::cout << std::endl;
              mean /=6;
 
+             //ROS_INFO_STREAM("Mean: " << mean);
+
              if(mean>THRESHOLD_1){
-                 ROS_INFO("MOVE HEAD");
-                 move_head(8);
+                 //ROS_INFO("MOVE HEAD LEFT");
+                 move_head_left(true);
+                 //move_head(8);
+                 //sleep(1);
              }else{
-                 move_head(0);
+                 //ROS_INFO("MOVE HEAD RIGHT");
+                 move_head_left(false);
+                 //sleep(1);
              }
              //clear last_bytes
              last_bytes.clear();
          }else{
              //collect data
-             last_bytes.push_back(next_byte);
+             if(next_byte != ','){
+                 ss << next_byte;
+            }else{
+                 //std::cout << ss.str().c_str() << ",";
+                 try{
+                 last_bytes.push_back(atoi(ss.str().c_str()));
+                 }catch(exception e){
+                     std::cerr << "couldnt convert" << std::endl;
+                 }
+
+                 ss.str(std::string());
+             }
          }
-         std::cerr << next_byte;
-                    writer<<next_byte<<",";
+         //std::cerr << next_byte;
+                    writer<<next_byte;
+
+
 
 
      }
-     std::cerr << std::endl ;
+     //std::cerr << std::endl ;
              writer.close();
      return EXIT_SUCCESS ;
 }
 
 
-
+#endif
 
 #if 0
 
@@ -186,6 +259,8 @@ std::endl ;
  */
 int main(int argc, char **argv)
 {
+  std::cout << "starting" << std::endl;
+  ROS_INFO("Starting");
   /**
    * The ros::init() function needs to see argc and argv so that it can perform
    * any ROS arguments and name remapping that were provided at the command line.
@@ -198,6 +273,7 @@ int main(int argc, char **argv)
    */
   ros::init(argc, argv, "talker");
 
+
   /**
    * NodeHandle is the main access point to communications with the ROS system.
    * The first NodeHandle constructed will fully initialize this node, and the last
@@ -205,6 +281,7 @@ int main(int argc, char **argv)
    */
   ros::NodeHandle n;
 
+  ROS_INFO("Handle created");
   /**
    * The advertise() function is how you tell ROS that you want to
    * publish on a given topic name. This invokes a call to the ROS
@@ -222,9 +299,10 @@ int main(int argc, char **argv)
    * than we can send them, the number here specifies how many messages to
    * buffer up before throwing some away.
    */
+  ROS_INFO("init");
   ros::Publisher chatter_pub = n.advertise<std_msgs::String>("chatter", 1000);
 
-  ros::ServiceClient move_yaw_client = n.serviceClient<roboy_comm::Yaw>("roboy_move/yaw");
+  move_yaw_client = n.serviceClient<roboy_comm::Yaw>("roboy_move/yaw");
   ros::ServiceClient move_client = n.serviceClient<roboy_comm::Movement>("roboy_move/replay");
   ros::ServiceClient emotion_client = n.serviceClient<roboy_comm::ShowEmotion>("roboy_face/show_emotion");
   ros::ServiceClient talker_client = n.serviceClient<roboy_comm::Talk>("speech_synthesis/talk");
@@ -235,7 +313,7 @@ int main(int argc, char **argv)
    * A count of how many messages we have sent. This is used to create
    * a unique string for each message.
    */
-  int count = 0;
+  int count = 100;
   bool left = false;
   while (ros::ok())
   {
@@ -262,7 +340,7 @@ int main(int argc, char **argv)
 
     move_yaw_srv.request.value = count_2;
 
-    //ROS_INFO_STREAM("calling move_client");
+    ROS_INFO_STREAM("calling move_client");
     move_yaw_client.call(move_yaw_srv);
 
     roboy_comm::ShowEmotion emotion_srv;
