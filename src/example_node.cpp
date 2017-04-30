@@ -1,8 +1,11 @@
+
+#if 1
 int main(){
     return 0;
 }
-
+#endif
 #if 0
+//uncomment this part to use the emg and head movement control, but libs are needed!
 
 #include "ros/ros.h"
 #include "std_msgs/String.h"
