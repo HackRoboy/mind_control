@@ -1,4 +1,8 @@
+int main(){
+    return 0;
+}
 
+#if 0
 
 #include "ros/ros.h"
 #include "std_msgs/String.h"
@@ -75,8 +79,8 @@ void move_head_left(bool left){
     }
     move_head(curr_state_head_yaw);
 }
-
-#if 1
+#endif
+#if 0
 int main( int    argc, char** argv  ){
 
     ros::init(argc, argv, "mind_control");
