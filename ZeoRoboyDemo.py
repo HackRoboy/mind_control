@@ -1,15 +1,4 @@
-"""
-sleepStreamUploaderWithEyeSignal
-------
-
-This module parses data from the BaseCapture module and assembles them
-into slices that encompass a range of data representative of
-Zeo's current status. It then sends this data to sleepstreamonline.com
-(Code modified from Brian Schiffer's sleepStreamUploader to add 
- detection of intentional eye movements for signalling other dreamers)
-
-"""
-
+#!/usr/bin/env python
 # System Libraries
 from math import sqrt, copysign, tanh
 import time
@@ -17,7 +6,9 @@ from time import localtime,strftime, gmtime
 import urllib
 import socket
 import threading
-import memcache
+
+import rospy
+from roboy_comm.srv import ShowEmotion
 
 # Zeo Libraries
 from ZeoRawData.BaseLink import BaseLink
@@ -38,6 +29,26 @@ eyeMin = -0.1        # The negative peak of an eye movement must be below this t
 eyeDistMin = 25      # The two peaks must be at least this far apart to count
 eyeDistMax = 128      # The two peaks must be less than this far apart to count
 eyeDiff = 0.4       # The max and min must be this different or more
+
+
+
+#service call ros
+def send_emotion_left(left):
+    rospy.wait_for_service('roboy_face/show_emotion');
+    try:
+	service = rospy.ServiceProxy('roboy_face/show_emotion', ShowEmotion);
+        if(left):
+            service('lookleft');
+        else:
+	    service('lookright');
+    except rospy.ServiceException, e:
+        print "Service call failed%s"%e
+
+
+
+
+
+
 
 signalSeconds = 2.5  # The number of seconds within which both right and left eye movents must occur before signal is logged    
 
@@ -217,6 +228,7 @@ class onlineParser:
                             self.Slice['eye']=1
                             self.EyeBuffer=[0]*192
                             print '**EYE RIGHT**'
+                            send_emotion_left(False);
                             startLeftClock = 0
                             print startRightClock, time.time()
                             if time.time() - startRightClock < signalSeconds:
@@ -230,6 +242,7 @@ class onlineParser:
                             self.Slice['eye']=-1
                             self.EyeBuffer=[0]*192
                             print '**EYE LEFT**'
+                            send_emotion_left(True);
                             startRightClock = 0
                             print startLeftClock, time.time()
                             if time.time() - startLeftClock < signalSeconds:
@@ -261,8 +274,6 @@ class onlineParser:
             
         elif datatype == 'SleepStage':
             self.Slice['sleepstage'] = getUInt32(data[1:])
-            mc = memcache.Client(['127.0.0.1:11211'], debug=0)
-            mc.set("sleepstage", self.Slice['sleepstage'])
             
 if __name__ == "__main__":
 
