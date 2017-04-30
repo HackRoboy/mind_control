@@ -23,12 +23,17 @@
 #include <cstdlib>
 #include <string>
 
+#include <sstream>
+
  using namespace std;
  using namespace LibSerial ;
+int curr_state_head_yaw = 0;
 
 ros::ServiceClient move_yaw_client;
 double THRESHOLD_1 = 220;
-std::vector<char> last_bytes;
+std::vector<int> last_bytes;
+int counter_above_th = 0;
+int counter_all = 0;
 
 void move_head(int pos){
     if(ros::ok()){
@@ -39,7 +44,39 @@ void move_head(int pos){
     }
 
 }
-#if 0
+
+void move_head_left(bool left){
+    bool real_left = false;
+    //ROS_INFO_STREAM("counter: " << counter_all << " counter_abv: " << counter_above_th);
+    if(counter_all < 100){
+        if(left){
+            counter_above_th++;
+        }
+        counter_all++;
+        return;
+    }else{
+        if(counter_above_th>10){
+            real_left = true;
+        }
+        ROS_INFO_STREAM("Counter_Above_th: " << counter_above_th);
+        counter_all = 0;
+        counter_above_th = 0;
+    }
+    if(real_left){
+        curr_state_head_yaw +=1;
+        if(curr_state_head_yaw>12){
+            curr_state_head_yaw = 12;
+        }
+    }else{
+        curr_state_head_yaw -=1;
+        if(curr_state_head_yaw<-12){
+            curr_state_head_yaw = -12;
+        }
+    }
+    move_head(curr_state_head_yaw);
+}
+
+#if 1
 int main( int    argc, char** argv  ){
 
     ros::init(argc, argv, "mind_control");
@@ -58,7 +95,7 @@ int main( int    argc, char** argv  ){
      //
      SerialStream serial_port ;
      char c;
-     serial_port.Open( "/dev/ttyACM0" ) ;
+     serial_port.Open( "/dev/ttyACM2" ) ;
      if ( ! serial_port.good() )
      {
          std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] "
@@ -69,7 +106,7 @@ int main( int    argc, char** argv  ){
      //
      // Set the baud rate of the serial port.
      //
-     serial_port.SetBaudRate( SerialStreamBuf::BAUD_57600 ) ;
+     serial_port.SetBaudRate( SerialStreamBuf::BAUD_9600 ) ;
      if ( ! serial_port.good() )
      {
          std::cerr << "Error: Could not set the baud rate." <<
@@ -140,41 +177,74 @@ std::endl ;
      }
 
          ofstream writer;
-         writer.open("Log.csv");
+         writer.open("Log.txt");
      char out_buf[] = "check";
      serial_port.write(out_buf, 5);
-     while( serial_port.rdbuf()->in_avail() > 0 )
+     std::stringstream ss;
+     //while( serial_port.rdbuf()->in_avail() > 0 )
+     while(1)
      {
-         ROS_INFO("while loop");
+         //ROS_INFO("while loop");
          char next_byte;
          serial_port.get(next_byte);
          if(next_byte=='\n'){
+             //std::cout << std::endl;
              //calculate mean and decide action
              double mean = 0;
+             //for(int i = 0; i < last_bytes.size(); i++){
+             //    std::cout << last_bytes[i] << " ";
+             //}
+             //std::cout << std::endl;
+
              for(int i = 0; i < 6; i++){
-                 mean += (int)last_bytes[1+i*2];
+                 try{
+                    mean += last_bytes[1+i*2];
+                 }catch(exception e){
+                     std:cerr << "exception" << std::endl;
+                 }
+
+                 //std::cout<<(int)last_bytes[1+i*2] << ", ";
              }
+             //std::cout << std::endl;
              mean /=6;
 
+             //ROS_INFO_STREAM("Mean: " << mean);
+
              if(mean>THRESHOLD_1){
-                 ROS_INFO("MOVE HEAD");
-                 move_head(8);
+                 //ROS_INFO("MOVE HEAD LEFT");
+                 move_head_left(true);
+                 //move_head(8);
+                 //sleep(1);
              }else{
-                 ROS_INFO("DONT MOVE HEAD");
-                 move_head(0);
+                 //ROS_INFO("MOVE HEAD RIGHT");
+                 move_head_left(false);
+                 //sleep(1);
              }
              //clear last_bytes
              last_bytes.clear();
          }else{
              //collect data
-             last_bytes.push_back(next_byte);
+             if(next_byte != ','){
+                 ss << next_byte;
+            }else{
+                 //std::cout << ss.str().c_str() << ",";
+                 try{
+                 last_bytes.push_back(atoi(ss.str().c_str()));
+                 }catch(exception e){
+                     std::cerr << "couldnt convert" << std::endl;
+                 }
+
+                 ss.str(std::string());
+             }
          }
-         std::cerr << next_byte;
-                    writer<<next_byte<<",";
+         //std::cerr << next_byte;
+                    writer<<next_byte;
+
+
 
 
      }
-     std::cerr << std::endl ;
+     //std::cerr << std::endl ;
              writer.close();
      return EXIT_SUCCESS ;
 }
@@ -182,7 +252,7 @@ std::endl ;
 
 #endif
 
-#if 1
+#if 0
 
 /**
  * This tutorial demonstrates simple sending of messages over the ROS system.
