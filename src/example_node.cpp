@@ -37,7 +37,7 @@ int main(){
 int curr_state_head_yaw = 0;
 
 ros::ServiceClient move_yaw_client;
-double THRESHOLD_1 = 220;
+double THRESHOLD_1 = 200;
 std::vector<int> last_bytes;
 int counter_above_th = 0;
 int counter_all = 0;
@@ -102,7 +102,7 @@ int main( int    argc, char** argv  ){
      //
      SerialStream serial_port ;
      char c;
-     serial_port.Open( "/dev/ttyACM2" ) ;
+     serial_port.Open( "/dev/ttyACM3" ) ;
      if ( ! serial_port.good() )
      {
          std::cerr << "[" << __FILE__ << ":" << __LINE__ << "] "
@@ -189,10 +189,11 @@ std::endl ;
      serial_port.write(out_buf, 5);
      std::stringstream ss;
      //while( serial_port.rdbuf()->in_avail() > 0 )
+     ROS_INFO("start while");
      while(1)
      {
          //ROS_INFO("while loop");
-         char next_byte;
+         char next_byte = '0';
          serial_port.get(next_byte);
          if(next_byte=='\n'){
              //std::cout << std::endl;
